@@ -1,12 +1,13 @@
 pub struct Instruction {
     pub opcode: Opcode,
-    pub addressing_mode: AddressingMode
+    pub address: Address,
 }
 
-include!(concat!(env!("OUT_DIR"),"/opcodes.rs"));
+include!(concat!(env!("OUT_DIR"), "/opcodes.rs"));
 
 /// The addressing mode and operands.
-pub enum AddressingMode {
+#[derive(PartialEq, Eq, Debug)]
+pub enum Address {
     Zero(u8),
     Implied,
     Absolute(u16),
@@ -19,5 +20,5 @@ pub enum AddressingMode {
     Indirect(u16),
     IndirectX(u8),
     IndirectY(u8),
-    Immediate(u8)
+    Immediate(u8),
 }

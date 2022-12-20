@@ -21,7 +21,9 @@ fn main() {
         let mode = line[2];
         let operands = match mode {
             "Implied" | "Accumulator" => "",
-            "Zero" | "ZeroX" | "ZeroY" | "Relative" | "IndirectX" | "IndirectY" | "Immediate" => "(self.load_pc())",
+            "Zero" | "ZeroX" | "ZeroY" | "Relative" | "IndirectX" | "IndirectY" | "Immediate" => {
+                "(self.load_pc())"
+            }
             "Indirect" | "Absolute" | "AbsoluteX" | "AbsoluteY" => "(self.load_pc_u16())",
             _ => {
                 println!("{mode}");
@@ -32,17 +34,29 @@ fn main() {
             names.push(name);
         }
 
-        parsing.write_all(format!("{opcode}=>Instruction{{opcode:Opcode::{name},addressing_mode:AddressingMode::{mode}{operands} }},").as_bytes()).unwrap();
+        parsing.write_all(format!("{opcode}=>Instruction{{opcode:Opcode::{name},address:Address::{mode}{operands} }},").as_bytes()).unwrap();
     }
-    
+
     for name in names {
         opcodes.write_all(format!("{name},").as_bytes()).unwrap();
     }
-    
+
     opcodes.write_all(b"}").unwrap();
-    parsing.write_all(b"_=>panic!(\"\\\"illegal\\\" opcode\")}}}").unwrap();
+    parsing
+        .write_all(b"_=>panic!(\"\\\"illegal\\\" opcode\")}}}")
+        .unwrap();
 
     // format the output
-    std::process::Command::new("rustfmt").arg(format!("{output}/opcodes.rs")).spawn().unwrap().wait().unwrap();
-    std::process::Command::new("rustfmt").arg(format!("{output}/parsing.rs")).spawn().unwrap().wait().unwrap();
+    std::process::Command::new("rustfmt")
+        .arg(format!("{output}/opcodes.rs"))
+        .spawn()
+        .unwrap()
+        .wait()
+        .unwrap();
+    std::process::Command::new("rustfmt")
+        .arg(format!("{output}/parsing.rs"))
+        .spawn()
+        .unwrap()
+        .wait()
+        .unwrap();
 }
