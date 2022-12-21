@@ -1,6 +1,6 @@
 pub struct Instruction {
     pub opcode: Opcode,
-    pub address: Address,
+    pub addr: Address,
 }
 
 include!(concat!(env!("OUT_DIR"), "/opcodes.rs"));

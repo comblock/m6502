@@ -34,7 +34,7 @@ fn main() {
             names.push(name);
         }
 
-        parsing.write_all(format!("{opcode}=>Instruction{{opcode:Opcode::{name},address:Address::{mode}{operands} }},").as_bytes()).unwrap();
+        parsing.write_all(format!("{opcode}=>Instruction{{opcode:Opcode::{name},addr:Address::{mode}{operands} }},").as_bytes()).unwrap();
     }
 
     for name in names {
