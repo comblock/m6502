@@ -15,7 +15,7 @@
 0x0E ASL Absolute
 0x16 ASL ZeroX
 0x1E ASL AbsoluteX
-0x20 JSR Implied
+0x20 JSR Absolute
 0x24 BIT Zero
 0x28 PLP Implied
 0x2C BIT Absolute
