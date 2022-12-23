@@ -1,5 +1,3 @@
-use std::ops::Shl;
-
 use instruction::{Address, Instruction, Opcode};
 
 mod instruction;
@@ -72,7 +70,6 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
     }
     /// Executes an instruction, the bool indicates if the instruction was BRK.
     fn execute(&mut self, instruction: Instruction) -> bool {
-        // I had to return this because I can't stop the loop inside of this function
         match instruction.opcode {
             Opcode::BRK => {
                 // Push the program counter + 2 onto the stack.
@@ -148,8 +145,8 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
                     _ => unreachable!(),
                 };
                 self.accumulator |= value;
-                // TODO: N flag
                 self.set_zero(self.accumulator == 0);
+                self.set_negative(self.accumulator & 0x80 != 0);
                 self.clock.cycles(ncycles)
             }
             Opcode::ASL => {
@@ -179,6 +176,8 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
                 } else {
                     self.accumulator = value << 1;
                 }
+                self.set_zero(self.accumulator == 0);
+                self.set_negative(self.accumulator & 0x80 != 0);
                 self.clock.cycles(ncycles)
             }
             Opcode::JSR => todo!(),
