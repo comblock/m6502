@@ -38,7 +38,7 @@ impl<B: Bus, C> Cpu<B, C> {
     fn push(&mut self, value: u8) {
         // the stack is in the 0x01 memory page
         self.bus.store(0x0100 & self.sp as u16, value);
-        self.sp = self.sp.wrapping_add(1);
+        self.sp = self.sp.wrapping_sub(1);
     }
 
     fn push_u16(&mut self, value: u16) {
@@ -50,7 +50,7 @@ impl<B: Bus, C> Cpu<B, C> {
     /// Pops a value from the stack.
     fn pop(&mut self) -> u8 {
         let value = self.bus.load(0x0100 & self.sp as u16);
-        self.sp = self.sp.wrapping_sub(1);
+        self.sp = self.sp.wrapping_add(1);
         value
     }
 
@@ -180,7 +180,18 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
                 self.set_negative(self.accumulator & 0x80 != 0);
                 self.clock.cycles(ncycles)
             }
-            Opcode::JSR => todo!(),
+            Opcode::JSR => {
+                let addr = if let Address::Absolute(addr) = instruction.addr {
+                    addr
+                } else {
+                    unreachable!()
+                };
+                // push the last byte of the instruction to the stack
+                self.push_u16(self.pc-1);
+
+                self.pc = addr;
+                self.clock.cycles(6)
+            },
             Opcode::BIT => todo!(),
             Opcode::PLP => todo!(),
             Opcode::BMI => self.branch(self.negative(), instruction.addr),
