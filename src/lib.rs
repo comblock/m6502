@@ -70,7 +70,7 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
     }
     /// Executes an instruction, the bool indicates if the instruction was BRK.
     fn execute(&mut self, instruction: Instruction) -> bool {
-        match instruction.opcode {
+        let ncycles = match instruction.opcode {
             Opcode::BRK => {
                 // Push the program counter + 2 onto the stack.
                 self.push_u16(self.pc.wrapping_add(2));
@@ -85,10 +85,13 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
                 self.set_break(true);
                 self.set_reserved(true);
                 self.push(self.status);
-                self.clock.cycles(3);
+                3
             }
             Opcode::BPL => self.branch(!self.negative(), instruction.addr),
-            Opcode::CLC => self.set_carry(false),
+            Opcode::CLC => {
+                self.set_carry(false);
+                2
+            }
             Opcode::ORA => {
                 let (value, ncycles) = match instruction.addr {
                     Address::Zero(addr) => (self.bus.load(addr as u16), 3),
@@ -120,19 +123,19 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
                     }
                     Address::ZeroX(addr) => (self.bus.load(addr.wrapping_add(self.x) as u16), 4),
                     Address::IndirectX(indirect) => {
-                        let address = self
+                        let addr = self
                             .bus
                             .load_u16(indirect as u16)
                             .wrapping_add(self.x as u16);
-                        (self.bus.load(address), 6)
+                        (self.bus.load(addr), 6)
                     }
                     Address::IndirectY(indirect) => {
                         // load the address stored in zero page
-                        let address = self.bus.load_u16(indirect as u16);
+                        let addr = self.bus.load_u16(indirect as u16);
                         // add the y register to it.
-                        let final_address = address.wrapping_add(self.y as u16);
-                        let value = self.bus.load(final_address);
-                        let ncycles = if address & 0xff00 == final_address & 0xff00 {
+                        let final_addr = addr.wrapping_add(self.y as u16);
+                        let value = self.bus.load(final_addr);
+                        let ncycles = if addr & 0xff00 == final_addr & 0xff00 {
                             // same memory page
                             5
                         } else {
@@ -147,18 +150,16 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
                 self.accumulator |= value;
                 self.set_zero(self.accumulator == 0);
                 self.set_negative(self.accumulator & 0x80 != 0);
-                self.clock.cycles(ncycles)
+                ncycles
             }
             Opcode::ASL => {
                 let (value, ncycles, addr) = match instruction.addr {
-                    Address::Accumulator => {
-                        (self.accumulator, 2, None)
-                    }
+                    Address::Accumulator => (self.accumulator, 2, None),
                     Address::Zero(addr) => (self.bus.load(addr as u16), 5, Some(addr as u16)),
                     Address::ZeroX(addr) => {
                         let addr = addr.wrapping_add(self.x) as u16;
                         (self.bus.load(addr), 6, Some(addr))
-                    },
+                    }
                     Address::Absolute(addr) => (self.bus.load(addr), 6, Some(addr)),
                     Address::AbsoluteX(addr) => {
                         let addr = addr.wrapping_add(self.x as u16);
@@ -178,7 +179,7 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
                 }
                 self.set_zero(self.accumulator == 0);
                 self.set_negative(self.accumulator & 0x80 != 0);
-                self.clock.cycles(ncycles)
+                ncycles
             }
             Opcode::JSR => {
                 let addr = if let Address::Absolute(addr) = instruction.addr {
@@ -187,20 +188,142 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
                     unreachable!()
                 };
                 // push the last byte of the instruction to the stack
-                self.push_u16(self.pc-1);
+                self.push_u16(self.pc - 1);
 
                 self.pc = addr;
-                self.clock.cycles(6)
+                6
+            }
+            Opcode::BIT => {
+                let (value, ncycles) = match instruction.addr {
+                    Address::Zero(addr) => (self.bus.load(addr as u16), 3),
+                    Address::Absolute(addr) => (self.bus.load(addr), 4),
+                    _ => unreachable!(),
+                };
+                let value = value & self.accumulator;
+                if value == 0 {
+                    self.set_zero(true)
+                } else {
+                    self.set_zero(false)
+                }
+                self.status &= value & 0xC0;
+                ncycles
+            }
+            Opcode::PLP => {
+                self.status &= self.pop() & 0xCF;
+                4
             },
-            Opcode::BIT => todo!(),
-            Opcode::PLP => todo!(),
             Opcode::BMI => self.branch(self.negative(), instruction.addr),
-            Opcode::SEC => todo!(),
-            Opcode::AND => todo!(),
-            Opcode::ROL => todo!(),
-            Opcode::RTI => todo!(),
-            Opcode::PHA => todo!(),
-            Opcode::JMP => todo!(),
+            Opcode::SEC => {
+                self.set_carry(true);
+                2
+            },
+            Opcode::AND => {
+                let (value, ncycles) = match instruction.addr {
+                    Address::Immediate(value) => (value, 2),
+                    Address::Zero(addr) => (self.bus.load(addr as u16), 3),
+                    Address::ZeroX(addr) => (self.bus.load(addr.wrapping_add(self.x) as u16), 4),
+                    Address::Absolute(addr) => (self.bus.load(addr), 4),
+                    Address::AbsoluteX(addr) => {
+                        // add the y register to it.
+                        let final_address = addr.wrapping_add(self.x as u16);
+                        let value = self.bus.load(final_address);
+                        let ncycles = if addr & 0xff00 == final_address & 0xff00 {
+                            // same memory page
+                            4
+                        } else {
+                            // different memory page
+                            5
+                        };
+                        (value, ncycles)
+                    },
+                    Address::AbsoluteY(addr) => {
+                        // add the y register to it.
+                        let final_addr = addr.wrapping_add(self.y as u16);
+                        let value = self.bus.load(final_addr);
+                        let ncycles = if addr & 0xff00 == final_addr & 0xff00 {
+                            // same memory page
+                            4
+                        } else {
+                            // different memory page
+                            5
+                        };
+                        (value, ncycles)
+                    },
+                    Address::IndirectX(indirect) => {
+                        // load the address stored in zero page
+                        let addr = self.bus.load_u16(indirect as u16);
+                        // add the y register to it.
+                        let final_addr = addr.wrapping_add(self.x as u16);
+                        let value = self.bus.load(final_addr);
+                        (value, 6)
+                    },
+                    Address::IndirectY(indirect) => {
+                        // load the address stored in zero page
+                        let address = self.bus.load_u16(indirect as u16);
+                        // add the y register to it.
+                        let final_addr = address.wrapping_add(self.y as u16);
+                        let value = self.bus.load(final_addr);
+                        let ncycles = if address & 0xff00 == final_addr & 0xff00 {
+                            // same memory page
+                            5
+                        } else {
+                            // different memory page
+                            6
+                        };
+                        (value, ncycles)
+                    },
+                    _ => {
+                        unreachable!()
+                    }
+                };
+                self.accumulator &= value;
+                self.set_zero(self.accumulator == 0);
+                self.set_negative(self.accumulator & 0x80 != 0);
+                ncycles
+            },
+            Opcode::ROL => {
+                // TODO: Reduce code duplication
+                let (mut value, ncycles, addr): (u8, u8, Option<u16>) = match instruction.addr {
+                    Address::Accumulator => (self.accumulator, 2, None),
+                    Address::Zero(addr) => (self.bus.load(addr as u16), 5, Some(addr as u16)),
+                    Address::ZeroX(addr) => {
+                        let addr = addr.wrapping_add(self.x) as u16;
+                        (self.bus.load(addr), 6, Some(addr))
+                    }
+                    Address::Absolute(addr) => (self.bus.load(addr), 6, Some(addr)),
+                    Address::AbsoluteX(addr) => {
+                        let addr = addr.wrapping_add(self.x as u16);
+                        (self.bus.load(addr), 7, Some(addr))
+                    }
+                    _ => unreachable!(),
+                };
+                self.set_carry(self.accumulator & 0x80 != 0);
+                value = value.rotate_left(1);
+                if let Some(addr) = addr {
+                    self.bus.store(addr, value)
+                } else {
+                    self.accumulator = value
+                }
+                ncycles
+            },
+            Opcode::RTI => {
+                self.status = self.pop() & 0xCF;
+                self.pc = self.pop_u16();
+                6
+            },
+            Opcode::PHA => {
+                self.push(self.accumulator);
+                3
+            },
+            Opcode::JMP => {
+                let (value, ncycles) = match instruction.addr {
+                    Address::Absolute(value) => (value, 3),
+                    Address::Indirect(addr) => (self.bus.load_u16(addr), 5),
+                    _ => unreachable!()
+                };
+                self.pc = value;
+                ncycles
+            },
             Opcode::BVC => self.branch(!self.overflow(), instruction.addr),
             Opcode::CLI => todo!(),
             Opcode::EOR => todo!(),
@@ -240,30 +363,29 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
             Opcode::SED => todo!(),
             Opcode::SBC => todo!(),
             Opcode::INC => todo!(),
-            Opcode::NOP => {
-                self.clock.cycles(2);
-            }
-        }
+            Opcode::NOP => 2,
+        };
+        self.clock.cycles(ncycles);
         false
     }
 
-    fn branch(&mut self, flag: bool, address: Address) {
+    fn branch(&mut self, flag: bool, address: Address) -> u8 {
         if flag {
             if let Address::Relative(address) = address {
                 let most_significant = self.pc.to_le_bytes()[1]; //
                 self.pc = (self.pc as i16).wrapping_add((address as i8).into()) as u16;
                 if self.pc.to_le_bytes()[1] == most_significant {
                     // branch on same memory page
-                    self.clock.cycles(3)
+                    3
                 } else {
                     // branch on a different memory page
-                    self.clock.cycles(4)
+                    4
                 }
             } else {
                 panic!("illegal addressing mode")
             }
         } else {
-            self.clock.cycles(2)
+            2
         }
     }
 }
