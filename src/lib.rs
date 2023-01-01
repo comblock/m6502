@@ -2,7 +2,7 @@ use instruction::{Address, Instruction, Opcode};
 
 mod instruction;
 
-//TODO: Reduce code duplication for clock cycles
+//TODO: Reduce code duplication
 
 pub struct Cpu<B, C> {
     bus: B,
