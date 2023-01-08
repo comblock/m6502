@@ -1,3 +1,4 @@
+#[derive(Debug, Clone, Copy)]
 pub struct Instruction {
     pub opcode: Opcode,
     pub addr: Address,
@@ -6,7 +7,7 @@ pub struct Instruction {
 include!(concat!(env!("OUT_DIR"), "/opcodes.rs"));
 
 /// The addressing mode and operands.
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum Address {
     Zero(u8),
     Implied,
