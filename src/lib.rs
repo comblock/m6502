@@ -6,15 +6,15 @@ mod instruction;
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct Cpu<B, C> {
-    pub(crate) bus: B,
-    pc: u16, // program counter
-    sp: u8,  // stack pointer
+    pub bus: B,
+    pub pc: u16, // program counter
+    pub sp: u8,  // stack pointer
     // index registers
-    x: u8,
-    y: u8,
+    pub x: u8,
+    pub y: u8,
 
-    status: u8,
-    accumulator: u8,
+    pub status: u8,
+    pub accumulator: u8,
 
     pub(crate) clock: C,
 }
@@ -174,14 +174,13 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
     pub fn run(&mut self) {
         loop {
             let instruction = self.fetch();
-            println!("{:?}\nPC:{}\nX:{}, Y:{}, S:{:08b}", instruction, self.pc, self.x, self.y, self.status);
             if self.execute(instruction) {
                 break;
             }
         }
     }
     /// Executes an instruction, the bool indicates if the instruction was BRK.
-    pub(crate) fn execute(&mut self, instruction: Instruction) -> bool {
+    pub fn execute(&mut self, instruction: Instruction) -> bool {
         let ncycles = match instruction.opcode {
             Opcode::BRK => {
                 // Push the program counter + 2 onto the stack.
@@ -343,14 +342,7 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
             },
             Opcode::ADC => {
                 let (value, ncycles) = self.alu_operands(instruction.addr);
-                let mut temp = self.accumulator as u16;
-                temp += value as u16 + self.carry() as u16; // can't overflow
-                self.set_overflow((self.accumulator & value & 0x80 != temp as u8 & 0x80) && self.accumulator & 0x80 == value & 0x80);
-                self.accumulator = temp as u8;
-                
-                self.set_carry((temp & 0x0100) == 0x0100);
-                self.set_zero(self.accumulator == 0);
-                self.set_negative(self.accumulator & 0x80 == 0x80);
+                self.adc(value);
                 ncycles
             },
             Opcode::ROR => {
@@ -594,16 +586,8 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
                 2
             },
             Opcode::SBC => {
-                let (mut value, ncycles) = self.alu_operands(instruction.addr);
-                value = !value;
-                let mut temp = self.accumulator as u16;
-                temp += value as u16 + self.carry() as u16; // can't overflow
-                self.set_overflow((self.accumulator & value & 0x80 != temp as u8 & 0x80) && self.accumulator & 0x80 == value & 0x80);
-                self.accumulator = temp as u8;
-                
-                self.set_carry((temp & 0x0100) == 0x0100);
-                self.set_zero(self.accumulator == 0);
-                self.set_negative(self.accumulator & 0x80 == 0x80);
+                let (value, ncycles) = self.alu_operands(instruction.addr);
+                self.adc(!value);
                 ncycles
             },
             Opcode::INC => {
@@ -628,7 +612,6 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
 
     fn branch(&mut self, flag: bool, address: Address) -> u8 {
         if flag {
-            println!("made it in!");
             if let Address::Relative(address) = address {
                 let most_significant = self.pc.to_le_bytes()[1]; //
                 self.pc = (self.pc as i16).wrapping_add(address as i8 as i16) as u16;
@@ -645,6 +628,17 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
         } else {
             2
         }
+    }
+
+    fn adc(&mut self, value: u8) {
+        let mut temp = self.accumulator as u16;
+        temp += value as u16 + self.carry() as u16; // can't overflow
+        self.set_overflow((self.accumulator & value & 0x80 != temp as u8 & 0x80) && self.accumulator & 0x80 == value & 0x80);
+        self.accumulator = temp as u8;
+        
+        self.set_carry((temp & 0x0100) == 0x0100);
+        self.set_zero(self.accumulator == 0);
+        self.set_negative(self.accumulator & 0x80 == 0x80);
     }
 }
 

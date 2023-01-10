@@ -1,4 +1,4 @@
-use std::{io::Write, process::ExitStatus};
+use std::io::Write;
 
 const OPCODES: &str = include_str!("opcodes.txt");
 
@@ -10,7 +10,7 @@ fn main() {
 
     opcodes.write_all(b"#[derive(Debug, Clone, Copy)]pub enum Opcode{").unwrap();
 
-    parsing.write_all(b"impl<B:Bus,C>Cpu<B,C>{\n///Fetches the next instruction and its operands.\npub(crate) fn fetch(&mut self)->Instruction{let opcode=self.load_pc();match opcode{").unwrap();
+    parsing.write_all(b"impl<B:Bus,C>Cpu<B,C>{\n///Fetches the next instruction and its operands.\npub fn fetch(&mut self)->Instruction{let opcode=self.load_pc();match opcode{").unwrap();
 
     let mut names = Vec::<&str>::new();
 
@@ -61,12 +61,16 @@ fn main() {
         .wait()
         .unwrap();
 
-    // Compilation of C source
-    let out = std::process::Command::new("make").arg("cc65").spawn().unwrap().wait_with_output().unwrap();
-    println!("{}", String::from_utf8(out.stdout).unwrap());
-    eprint!("{}", String::from_utf8(out.stderr).unwrap());
-    if !out.status.success() {
-        panic!("Error while compiling C code")
-    }
-    std::process::Command::new("da65").arg("${OUT_DIR} -o asm.a").spawn().unwrap().wait().unwrap();
+    // Assemble the assembly source using customasm
+    let mut fileserver = customasm::util::FileServerReal::new();
+    let args = vec![
+        String::new(),
+        String::from("src/asm/main.asm"),
+        String::from("-f"),
+        String::from("binary"),
+        String::from("-o"),
+        format!("{output}/program"),
+    ];
+
+    customasm::driver::drive(&args, &mut fileserver).unwrap();
 }
