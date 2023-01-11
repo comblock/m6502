@@ -1,5 +1,5 @@
 ; Positions are stored as bytes. 
-; The low nibble is used to represent the x axis and the high nibble is used to represent the y axis.
+; The low nybble is used to represent the x axis and the high nybble is used to represent the y axis.
 
 ; Combines an X and a Y coordinate into one byte.
 ; This function assumes the X register holds the X position and the Y register holds the Y position.
@@ -13,7 +13,7 @@ combine_pos:
     ; Store the sanitised x position at <0x10
     STA <0x10
     TYA 
-    ; Shift the Y position to the high nibble
+    ; Shift the Y position to the high nybble
     ASL a
     ASL a
     ASL a
@@ -34,7 +34,7 @@ split_pos:
     TAX 
     ; Put the initial value back in the accumulator
     TYA 
-    ; Shift the position into the low nibble to extract the Y value
+    ; Shift the position into the low nybble to extract the Y value
     LSR a
     LSR a
     LSR a

@@ -695,7 +695,6 @@ mod test {
 
     const URL: &str = "https://raw.githubusercontent.com/TomHarte/ProcessorTests/main/nes6502/v1/";
 
-    /// I added this test after I got a lot of strange errors.
     #[test]
     fn test() {
         let opcodes = include_str!("../opcodes.txt");
