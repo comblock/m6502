@@ -16,7 +16,7 @@ pub struct Cpu<B, C> {
     pub status: u8,
     pub accumulator: u8,
 
-    pub(crate) clock: C,
+    pub clock: C,
 }
 
 include!(concat!(env!("OUT_DIR"), "/parsing.rs"));
