@@ -1,15 +1,16 @@
 draw:
-    ; Fist, draw the food
-    LDA #FOOD_COLOUR
-    LDX <FOOD_ADDR
-    STA DISPLAY_ADDR, x
-
     ; Clear the previous tail position if CLEAR_ADDR != 0
     LDA <CLEAR_ADDR 
     BEQ .skip_clear
     LDX <PREVIOUS_TAIL_ADDR 
     LDA #0
     STA DISPLAY_ADDR, x
+
+    ; Draw the food
+    LDA #FOOD_COLOUR
+    LDX <FOOD_ADDR
+    STA DISPLAY_ADDR, x
+
 
     ; Draw the body
     .skip_clear:
