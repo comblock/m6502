@@ -113,7 +113,7 @@ struct Clock;
 
 impl m6502::Clock for Clock {
     fn cycles(&mut self, n: u8) {
-        std::thread::sleep(std::time::Duration::from_micros(500 * n as u64)) // This ensures the CPU runs at 2 MHz
+        std::thread::sleep(std::time::Duration::from_micros(1 * n as u64)) // This ensures the CPU runs at 1 MHz
     }
 }
 

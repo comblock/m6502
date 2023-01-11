@@ -43,5 +43,6 @@ main:
     .loop:
         JSR update
         JSR draw
+        JSR timing
     JMP .loop
 

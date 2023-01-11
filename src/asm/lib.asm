@@ -9,3 +9,4 @@
 #include "draw.asm"
 #include "colour.asm"
 #include "food.asm"
+#include "timing.asm"

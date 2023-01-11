@@ -31,10 +31,16 @@ draw:
     STA DISPLAY_ADDR, y
 RTS 
 
+; Zero initialises the display
 clear:
     LDA #0
     LDX #0
     .loop:
+        ; the screen clearing has a nice visual effect but at 1MHz you can't see it so I inserted this loop to make it visible again
+        LDY #0x0f
+        .._loop:
+            DEY 
+        BNE .._loop
         STA DISPLAY_ADDR, x
         INX 
         ; Exit the loop if zero is set meaning x overflowed, meaning the buffer has been fully initialised.
