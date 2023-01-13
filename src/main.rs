@@ -145,7 +145,7 @@ fn run(cpu: &mut Cpu<Bus, Clock>) {
     loop {
         let instruction = cpu.fetch();
         let brk = cpu.execute(instruction);
-        println!("{:?}, PC:{:04x}, X:{}, Y:{}, S:{:08b}, A:{}, 0x0010:{}", instruction, cpu.pc, cpu.x, cpu.y, cpu.status, cpu.accumulator, cpu.bus.load(0x0010));
+        //println!("{:?}, PC:{:04x}, X:{}, Y:{}, S:{:08b}, A:{}, 0x0010:{}", instruction, cpu.pc, cpu.x, cpu.y, cpu.status, cpu.accumulator, cpu.bus.load(0x0010));
         if brk {
             break;
         };
