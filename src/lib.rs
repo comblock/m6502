@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use instruction::{Address, Instruction, Opcode};
 
 mod instruction;
@@ -181,6 +183,7 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
     }
     /// Executes an instruction, the bool indicates if the instruction was BRK.
     pub fn execute(&mut self, instruction: Instruction) -> bool {
+        let start = Instant::now();
         let ncycles = match instruction.opcode {
             Opcode::BRK => {
                 // Push the program counter + 2 onto the stack.
@@ -190,7 +193,7 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
                 self.push(self.status | 0b00010000);
                 self.set_interrupt_disable(true);
                 self.pc = self.bus.load_u16(0xFFFE);
-                self.clock.cycles(7);
+                self.clock.cycles(7, start);
                 return true;
             }
             Opcode::PHP => {
@@ -606,7 +609,7 @@ impl<B: Bus, C: Clock> Cpu<B, C> {
             },
             Opcode::NOP => 2,
         };
-        self.clock.cycles(ncycles);
+        self.clock.cycles(ncycles, start);
         false
     }
 
@@ -684,7 +687,7 @@ pub trait Bus {
 
 pub trait Clock {
     /// Waits for n amount of cycles.
-    fn cycles(&mut self, n: u8);
+    fn cycles(&mut self, n: u8, start: Instant);
 }
 
 

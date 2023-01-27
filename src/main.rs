@@ -1,5 +1,6 @@
 use std::sync::{Mutex, Arc};
 use std::thread::JoinHandle;
+use std::time::{Instant, Duration};
 use ggez::input::keyboard::KeyCode;
 use ggez::{Context, ContextBuilder, GameResult, GameError};
 use ggez::graphics::{self, Color};
@@ -93,6 +94,8 @@ impl EventHandler for State {
             _repeated: bool,
         ) -> Result<(), GameError> {
         if let Some(keycode) = input.keycode {
+            let mut mem = self.mem.lock().unwrap();
+            let prev_direction = mem[0x00ff];
             let direction = match keycode {
                 // set the direction in memory somewhere
                 KeyCode::Up => 3,
@@ -102,7 +105,10 @@ impl EventHandler for State {
 
                 _ => return Ok(())
             };
-            self.mem.lock().unwrap()[0x00ff] = direction;
+            
+            if (!direction & 0x03) != prev_direction {
+                mem[0x00ff] = direction;
+            }
         }    
         Ok(())
     }
@@ -112,8 +118,11 @@ impl EventHandler for State {
 struct Clock;
 
 impl m6502::Clock for Clock {
-    fn cycles(&mut self, n: u8) {
-        std::thread::sleep(std::time::Duration::from_micros(1 * n as u64)) // This ensures the CPU runs at 1 MHz
+    fn cycles(&mut self, n: u8, start: Instant) {
+        // This ensures the emulator runs at ~80kHz, it is much more reliable than using std::thread::sleep because this doesn't need a syscall
+        while start.elapsed() < Duration::from_micros(12 * n as u64) {
+          std::hint::spin_loop();
+        }  
     }
 }
 
