@@ -693,6 +693,8 @@ pub trait Clock {
 
 #[cfg(test)]
 mod test {
+    use std::time::Instant;
+
     use serde_derive::Deserialize;
     use serde_derive::Serialize;
 
@@ -800,7 +802,7 @@ mod test {
     }
 
     impl super::Clock for Clock {
-        fn cycles(&mut self, n: u8) {
+        fn cycles(&mut self, n: u8, start: Instant) {
             self.0+= n as u64;
         }
     }
